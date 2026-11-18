@@ -4,7 +4,7 @@ import {useRouter} from 'next/navigation';
 import ArticleEditor from '@/components/ArticleEditor';
 import {supabase} from '@/lib/supabase';
 
-const slugify=(s:string)=>s.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+const slugify=(s:string)=>s.toLowerCase().normalize('NFD').replace(/\\p{Diacritic}/gu,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
 const publishers=['super_admin','admin','editor','editor_in_chief'];
 const localInput=(date:Date)=>new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);
 type Snapshot={title:string;excerpt:string;content:any;category:string;image:string;source:string;sourceUrl:string;tags:string[]};
