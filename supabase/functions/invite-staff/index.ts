@@ -47,6 +47,8 @@ Deno.serve(async (req: Request) => {
   const { data, error } = await admin.auth.admin.inviteUserByEmail(email, { data: { full_name: fullName } });
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
   if (data.user) {
+    const { error: passwordError } = await admin.auth.admin.updateUserById(data.user.id, { password });
+    if (passwordError) return new Response(JSON.stringify({ error: "Undangan email terkirim, tetapi password awal gagal disetel. Atur ulang password anggota melalui Supabase Auth." }), { status: 202, headers: { ...cors, "Content-Type": "application/json" } });
     const { error: updateError } = await admin.from("profiles").update({ full_name: fullName }).eq("id", data.user.id);
     if (updateError) return new Response(JSON.stringify({ error: "Undangan terkirim, tetapi profil perlu diperiksa admin." }), { status: 202, headers: { ...cors, "Content-Type": "application/json" } });
     // Elevated editorial roles are assigned with the trusted service client after invitation.
