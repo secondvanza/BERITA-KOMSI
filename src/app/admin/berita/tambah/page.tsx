@@ -49,7 +49,7 @@ export default function NewArticle(){
    const row={title:snapshot.title.trim(),excerpt:snapshot.excerpt.trim(),content:snapshot.content||{type:'doc',content:[]},category_id:snapshot.category||null,featured_image:snapshot.image.trim()||null,source_name:snapshot.source.trim()||null,source_url:snapshot.sourceUrl.trim()||null,author_id:user.id,status:'draft',scheduled_at:null,published_at:null};
    let id=draftIdRef.current;
    if(id){const{error}=await supabase.from('articles').update(row).eq('id',id);if(error)throw error;}
-   else{const{data,error}=await supabase.from('articles').insert({...row,slug:slugify(snapshot.title)+'-'+Date.now().toString().slice(-6)}).select('id').single();if(error)throw error;id=data.id;draftIdRef.current=id;setAutoDraftId(id);window.localStorage.setItem('komsi:article-draft:'+user.id,id);}
+   else{const{data,error}=await supabase.from('articles').insert({...row,slug:slugify(snapshot.title)+'-'+Date.now().toString().slice(-6)}).select('id').single();if(error)throw error;id=data.id;draftIdRef.current=id;setAutoDraftId(id);if(id)window.localStorage.setItem('komsi:article-draft:'+user.id,id);}
    if(!id)throw new Error('ID draft tidak tersedia setelah penyimpanan.');
    await syncTags(id,snapshot.tags);
    setAutoMessage('Draft tersimpan otomatis pukul '+new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}));
