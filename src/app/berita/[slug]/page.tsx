@@ -5,6 +5,7 @@ import {supabase} from '@/lib/supabase';
 import CommentForm from '@/components/CommentForm';
 import PublicHeader from '@/components/PublicHeader';
 import PublicFooter from '@/components/PublicFooter';
+import SocialShare from '@/components/SocialShare';
 
 export async function generateMetadata({params}:{params:Promise<{slug:string}>}){
  const{slug}=await params;
@@ -35,6 +36,7 @@ export default async function Detail({params}:{params:Promise<{slug:string}>}){
   <span className="eyebrow">{category?.name||'Berita KOMSI'}</span>
   <h1 style={{fontSize:'clamp(32px,5vw,52px)',lineHeight:1.08,letterSpacing:'-.04em'}}>{a.title}</h1>
   <p className="muted">Oleh Redaksi KOMSI · {a.published_at?new Date(a.published_at).toLocaleDateString('id-ID',{dateStyle:'long',timeZone:'Asia/Jakarta'}):''}</p>
+  <SocialShare title={a.title} url={(process.env.NEXT_PUBLIC_SITE_URL||'https://berita-komsi.vercel.app')+'/berita/'+a.slug}/>
   {a.featured_image&&<img src={a.featured_image} alt={a.title} style={{width:'100%',height:'auto',maxHeight:520,objectFit:'cover',borderRadius:12,margin:'22px 0'}}/>}
   {a.excerpt&&<p style={{fontSize:19,lineHeight:1.7,fontWeight:600}}>{a.excerpt}</p>}
   {!!tagLinks.length&&<nav aria-label="Tag berita" style={{display:'flex',gap:8,flexWrap:'wrap',margin:'18px 0 24px'}}>{tagLinks.map((item:any)=><a key={item.tags?.slug||item.tags?.name} href={'/tag/'+item.tags?.slug} style={{border:'1px solid #e5e7eb',borderRadius:999,padding:'5px 12px',fontSize:13,color:'#b91c2c',textDecoration:'none'}}>#{item.tags?.name}</a>)}</nav>}
