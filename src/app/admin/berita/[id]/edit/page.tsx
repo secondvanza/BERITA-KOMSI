@@ -7,6 +7,7 @@ import {supabase} from '@/lib/supabase';
 
 const allStatuses=['draft','in_review','revision','scheduled','published','archived'];
 const localDate=(value:string|null)=>{if(!value)return '';const d=new Date(value);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)};
+const localInput=(date:Date)=>new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);
 const publishers=['super_admin','admin','editor','editor_in_chief'];
 const journalistStatuses=['draft','in_review','revision'];
 export default function EditArticle(){
@@ -79,7 +80,7 @@ export default function EditArticle(){
   <label>Kategori</label><select value={category} onChange={e=>setCategory(e.target.value)} style={field}><option value="">Pilih kategori</option>{categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
   <label>URL gambar utama</label><input value={image} onChange={e=>setImage(e.target.value)} style={field}/>
   <label>Status</label><select value={status} onChange={e=>setStatus(e.target.value)} style={field}>{(role==='journalist'?journalistStatuses:allStatuses).map(s=><option key={s} value={s}>{s}</option>)}</select>
-  <label>Isi berita</label>{status==='scheduled'&&publishers.includes(role)&&<><label>Waktu publikasi</label><input type='datetime-local' min={new Date(Date.now()+60000).toISOString().slice(0,16)} value={scheduledAt} onChange={e=>setScheduledAt(e.target.value)} style={field}/></>}<ArticleEditor value={content} onChange={setContent}/>
+  <label>Isi berita</label>{status==='scheduled'&&publishers.includes(role)&&<><label>Waktu publikasi</label><input type='datetime-local' min={localInput(new Date(Date.now()+60000))} value={scheduledAt} onChange={e=>setScheduledAt(e.target.value)} style={field}/></>}<ArticleEditor value={content} onChange={setContent}/>
   {msg&&<p role="status">{msg}</p>}
   <button disabled={saving||!title.trim()} onClick={save} style={primary}>{saving?'Menyimpan…':'Simpan perubahan'}</button>
  </>;
