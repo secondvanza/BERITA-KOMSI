@@ -33,7 +33,7 @@ export default function AdminShell({children}:{children:React.ReactNode}){
     return;
    }
    setName(profile.full_name||session.user.email||'Redaksi KOMSI');
-   setRole(profile.role||'journalist');
+   setRole(profile.role||'');
    setChecking(false);
   };
   verify();
@@ -51,8 +51,9 @@ export default function AdminShell({children}:{children:React.ReactNode}){
   if(['super_admin','admin'].includes(role))return true;
   if(href==='/admin/pengguna'||href==='/admin/pengaturan')return false;
   if(role==='journalist')return ['/admin/dashboard','/admin/berita','/admin/media','/admin/revisi'].includes(href);
-  if(role==='editor')return href!=='/admin/pengguna'&&href!=='/admin/pengaturan';
-  return true;
+  if(role==='editor')return true;
+  if(role==='editor_in_chief')return true;
+  return false;
  };
  return <div className="admin-shell">
   <aside className="admin-side">
