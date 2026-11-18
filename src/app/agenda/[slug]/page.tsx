@@ -4,6 +4,7 @@ import Link from 'next/link';
 import {supabase} from '@/lib/supabase';
 import PublicHeader from '@/components/PublicHeader';
 import PublicFooter from '@/components/PublicFooter';
+import SocialShare from '@/components/SocialShare';
 
 export async function generateMetadata({params}:{params:Promise<{slug:string}>}){
  const{slug}=await params;
@@ -22,6 +23,7 @@ export default async function AgendaDetail({params}:{params:Promise<{slug:string
    {event.ends_at&&<span>Sampai {new Date(event.ends_at).toLocaleString('id-ID',{dateStyle:'full',timeStyle:'short',timeZone:'Asia/Jakarta'})}</span>}
    <span>{event.location||'Lokasi menyusul'}</span>
   </div>
+  <SocialShare title={event.title} url={(process.env.NEXT_PUBLIC_SITE_URL||'https://berita-komsi.vercel.app')+'/agenda/'+event.slug}/>
   {event.cover_image&&<img src={event.cover_image} alt={event.title} style={{width:'100%',maxHeight:460,objectFit:'cover',borderRadius:12,marginBottom:22}}/>}
   <article style={{background:'white',border:'1px solid #eee',borderRadius:10,padding:24,lineHeight:1.85,whiteSpace:'pre-wrap'}}>{event.description||'Informasi kegiatan akan diperbarui.'}</article>
  </main><PublicFooter/></>;
