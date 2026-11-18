@@ -6,6 +6,7 @@ import {supabase} from '@/lib/supabase';
 
 const slugify=(s:string)=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
 const publishers=['super_admin','admin','editor','editor_in_chief'];
+const localInput=(date:Date)=>new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);
 
 export default function NewArticle(){
  const router=useRouter();
@@ -80,7 +81,7 @@ export default function NewArticle(){
   <label>Sumber berita (opsional)</label><input value={source} onChange={e=>setSource(e.target.value)} placeholder="Nama sumber" style={input}/>
   <label>URL sumber (opsional)</label><input value={sourceUrl} onChange={e=>setSourceUrl(e.target.value)} placeholder="https://…" style={input}/>
   <label>Isi berita</label><div style={{marginTop:8}}><ArticleEditor value={content} onChange={setContent}/></div>
-  {publishers.includes(role)&&<div style={{background:'white',padding:15,border:'1px solid #eee',borderRadius:8,marginTop:18}}><b>Jadwalkan publikasi</b><input type="datetime-local" min={new Date(Date.now()+60000).toISOString().slice(0,16)} value={scheduled} onChange={e=>setScheduled(e.target.value)} style={input}/></div>}
+  {publishers.includes(role)&&<div style={{background:'white',padding:15,border:'1px solid #eee',borderRadius:8,marginTop:18}}><b>Jadwalkan publikasi</b><input type="datetime-local" min={localInput(new Date(Date.now()+60000))} value={scheduled} onChange={e=>setScheduled(e.target.value)} style={input}/></div>}
   {message&&<p role="status" style={{color:'#b91c1c'}}>{message}</p>}
   <div style={{display:'flex',gap:10,flexWrap:'wrap',marginTop:20}}>
    <button disabled={busy||!title.trim()} onClick={()=>save('draft')} style={button}>{busy?'Menyimpan…':'Simpan draft'}</button>
