@@ -11,6 +11,9 @@ export default function Events(){
  const[location,setLocation]=useState('');
  const[date,setDate]=useState('');
  const[description,setDescription]=useState('');
+ const[coverImage,setCoverImage]=useState('');
+ const[imageFile,setImageFile]=useState<File|null>(null);
+ const[imagePreview,setImagePreview]=useState('');
  const[editingId,setEditingId]=useState<string|null>(null);
  const[msg,setMsg]=useState('');
  const[busy,setBusy]=useState(false);
@@ -24,11 +27,12 @@ export default function Events(){
  useEffect(()=>{load()},[]);
 
  function reset(){
-  setTitle('');setLocation('');setDate('');setDescription('');setEditingId(null);
+  setTitle('');setLocation('');setDate('');setDescription('');setCoverImage('');setImageFile(null);setImagePreview('');setEditingId(null);
  }
  function edit(event:any){
   setEditingId(event.id);setTitle(event.title||'');setLocation(event.location||'');
   setDate(localDate(event.starts_at));setDescription(event.description||'');
+  setCoverImage(event.cover_image||'');setImageFile(null);setImagePreview(event.cover_image||'');
   setMsg('');
   window.scrollTo({top:0,behavior:'smooth'});
  }
@@ -38,7 +42,18 @@ export default function Events(){
   setBusy(true);setMsg('');
   const{data:{user}}=await supabase.auth.getUser();
   if(!user){setMsg('Sesi login berakhir. Silakan masuk kembali.');setBusy(false);return}
-  const values={title:title.trim(),location:location.trim()||null,starts_at:date?new Date(date).toISOString():null,description:description.trim()||null};
+  let uploadedImage=coverImage;
+  if(imageFile){
+   if(!imageFile.type.startsWith('image/')){setMsg('File harus berupa gambar.');setBusy(false);return}
+   if(imageFile.size>5*1024*1024){setMsg('Ukuran gambar maksimal 5 MB.');setBusy(false);return}
+   const ext=(imageFile.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+   const path='agenda/'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.'+ext;
+   const{error:uploadError}=await supabase.storage.from('komsi-media').upload(path,imageFile,{upsert:false,contentType:imageFile.type});
+   if(uploadError){setMsg('Gagal mengunggah gambar: '+uploadError.message);setBusy(false);return}
+   const{data:publicData}=supabase.storage.from('komsi-media').getPublicUrl(path);
+   uploadedImage=publicData.publicUrl;
+  }
+  const values={title:title.trim(),location:location.trim()||null,starts_at:date?new Date(date).toISOString():null,description:description.trim()||null,cover_image:uploadedImage||null};
   const result=editingId
    ? await supabase.from('events').update(values).eq('id',editingId)
    : await supabase.from('events').insert({...values,slug:slugify(title)+'-'+Date.now().toString().slice(-5),created_by:user.id,status:'draft'});
@@ -67,6 +82,10 @@ export default function Events(){
    <input maxLength={180} placeholder="Lokasi" value={location} onChange={e=>setLocation(e.target.value)} style={field}/>
    <label style={{fontSize:13}}>Tanggal dan waktu kegiatan</label>
    <input type="datetime-local" value={date} onChange={e=>setDate(e.target.value)} style={field}/>
+   <label style={{display:'block',fontSize:13,marginTop:12}}>Gambar / poster agenda</label>
+   <input type="file" accept="image/*" onChange={e=>{const file=e.target.files?.[0]||null;setImageFile(file);setImagePreview(file?URL.createObjectURL(file):coverImage)}} style={field}/>
+   <small className="muted">Format gambar umum, maksimal 5 MB. Gambar akan tampil di sorotan, daftar agenda, dan halaman detail.</small>
+   {imagePreview&&<div style={{margin:'10px 0'}}><img src={imagePreview} alt="Pratinjau gambar agenda" style={{width:'100%',maxWidth:420,maxHeight:220,objectFit:'cover',borderRadius:8}}/><button type="button" onClick={()=>{setImageFile(null);setImagePreview('');setCoverImage('')}} style={{...secondary,display:'block',marginTop:8}}>Hapus gambar</button></div>}
    <textarea maxLength={10000} placeholder="Deskripsi kegiatan" value={description} onChange={e=>setDescription(e.target.value)} style={field}/>
    <div style={{display:'flex',gap:9,flexWrap:'wrap'}}>
     <button disabled={busy||!title.trim()} style={primary}>{busy?'Menyimpan…':editingId?'Simpan perubahan':'Simpan sebagai draft'}</button>
@@ -78,7 +97,7 @@ export default function Events(){
    <h3>Daftar agenda ({rows.length})</h3>
    {!rows.length&&<p className="muted">Belum ada agenda.</p>}
    {rows.map(event=><div key={event.id} style={{padding:12,borderBottom:'1px solid #eee'}}>
-    <b>{event.title}</b>
+    {event.cover_image&&<img src={event.cover_image} alt={event.title} style={{width:150,height:90,objectFit:'cover',borderRadius:7,display:'block',marginBottom:8}}/>}<b>{event.title}</b>
     <p className="muted">{event.location||'Lokasi belum ditentukan'} · {event.starts_at?new Date(event.starts_at).toLocaleString('id-ID'):'Jadwal menyusul'} · {event.status}</p>
     {event.description&&<p>{event.description}</p>}
     <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
