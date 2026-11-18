@@ -3,6 +3,7 @@ import {useEffect,useState} from 'react';
 import {supabase} from '@/lib/supabase';
 
 const localDate=(value:string|null)=>{if(!value)return '';const d=new Date(value);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)};
+const ALLOWED_IMAGE_TYPES=['image/png','image/jpeg','image/webp','image/gif'];
 const slugify=(value:string)=>value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
 
 export default function Events(){
@@ -44,7 +45,7 @@ export default function Events(){
   if(!user){setMsg('Sesi login berakhir. Silakan masuk kembali.');setBusy(false);return}
   let uploadedImage=coverImage;
   if(imageFile){
-   if(!imageFile.type.startsWith('image/')){setMsg('File harus berupa gambar.');setBusy(false);return}
+   if(!ALLOWED_IMAGE_TYPES.includes(imageFile.type)){setMsg('Format gambar tidak didukung. Gunakan JPG, PNG, WEBP, atau GIF.');setBusy(false);return}
    if(imageFile.size>5*1024*1024){setMsg('Ukuran gambar maksimal 5 MB.');setBusy(false);return}
    const ext=(imageFile.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
    const path='agenda/'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.'+ext;
@@ -83,7 +84,7 @@ export default function Events(){
    <label style={{fontSize:13}}>Tanggal dan waktu kegiatan</label>
    <input type="datetime-local" value={date} onChange={e=>setDate(e.target.value)} style={field}/>
    <label style={{display:'block',fontSize:13,marginTop:12}}>Gambar / poster agenda</label>
-   <input type="file" accept="image/*" onChange={e=>{const file=e.target.files?.[0]||null;setImageFile(file);setImagePreview(file?URL.createObjectURL(file):coverImage)}} style={field}/>
+   <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={e=>{const file=e.target.files?.[0]||null;setImageFile(file);setImagePreview(file?URL.createObjectURL(file):coverImage)}} style={field}/>
    <small className="muted">Format gambar umum, maksimal 5 MB. Gambar akan tampil di sorotan, daftar agenda, dan halaman detail.</small>
    {imagePreview&&<div style={{margin:'10px 0'}}><img src={imagePreview} alt="Pratinjau gambar agenda" style={{width:'100%',maxWidth:420,maxHeight:220,objectFit:'cover',borderRadius:8}}/><button type="button" onClick={()=>{setImageFile(null);setImagePreview('');setCoverImage('')}} style={{...secondary,display:'block',marginTop:8}}>Hapus gambar</button></div>}
    <textarea maxLength={10000} placeholder="Deskripsi kegiatan" value={description} onChange={e=>setDescription(e.target.value)} style={field}/>

@@ -70,7 +70,7 @@ export default function NewArticle(){
   if(!draftSaved||!id){setMessage('Draft belum dapat disimpan. Periksa koneksi lalu coba lagi.');setBusy(false);return}
   finalizing.current=true;
   const{error}=await supabase.from('articles').update({status,scheduled_at:status==='scheduled'?new Date(scheduled).toISOString():null,published_at:null}).eq('id',id);
-  setBusy(false);if(error){finalizing.current=false;setMessage('Gagal menyimpan berita: '+error.message);return}if(status!=='draft')window.localStorage.removeItem('komsi:article-draft:'+user.id);router.push('/admin/berita');
+  setBusy(false);if(error){finalizing.current=false;setMessage('Gagal menyimpan berita: '+error.message);return}window.localStorage.removeItem('komsi:article-draft:'+user.id);router.push('/admin/berita');
  }
  return <div style={{maxWidth:1000}}>
   <div className="eyebrow">Redaksi / Berita</div><h1>Tulis berita baru</h1>

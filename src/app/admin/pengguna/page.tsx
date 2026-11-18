@@ -4,6 +4,16 @@ import {useEffect,useState} from 'react';
 import {supabase} from '@/lib/supabase';
 
 const roles=['journalist','editor','editor_in_chief','admin','super_admin'];
+async function functionErrorMessage(error:any){
+ let detail=error?.message||'Permintaan gagal diproses.';
+ const response=error?.context;
+ if(response&&typeof response.clone==='function'){
+  const payload=await response.clone().json().catch(()=>null);
+  if(payload?.error)detail=String(payload.error);
+  else if(payload?.message)detail=String(payload.message);
+ }
+ return detail;
+}
 export default function Users(){
  const[rows,setRows]=useState<any[]>([]);
  const[msg,setMsg]=useState('');
@@ -29,7 +39,7 @@ export default function Users(){
    setMsg('Hanya super admin yang dapat mengelola akun admin dan super admin.');return
   }
   const{data,error}=await supabase.functions.invoke('admin-set-profile-role',{body:{target_user_id:target.id,new_role:newRole}});
-  if(error||data?.error){setMsg(error?.message||data?.error||'Gagal memperbarui peran.');return}
+  if(error){setMsg(await functionErrorMessage(error));return}if(data?.error){setMsg(data.error);return}
   setMsg(data?.message||'Peran berhasil diperbarui.');
   await load();
  }
@@ -41,7 +51,7 @@ export default function Users(){
   if(!window.confirm(`Hapus akun ${label}? Tindakan ini permanen dan tidak dapat dibatalkan.`))return;
   setMsg('Menghapus pengguna…');
   const{data,error}=await supabase.functions.invoke('super-admin-delete-user',{body:{target_user_id:target.id}});
-  if(error||data?.error){setMsg(error?.message||data?.error||'Gagal menghapus pengguna.');return}
+  if(error){setMsg(await functionErrorMessage(error));return}if(data?.error){setMsg(data.error);return}
   setMsg(data?.message||'Pengguna berhasil dihapus.');
   await load();
  }

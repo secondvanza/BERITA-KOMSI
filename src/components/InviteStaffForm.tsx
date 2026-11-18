@@ -12,13 +12,27 @@ export default function InviteStaffForm({onDone}:{onDone:()=>void}){
  const[busy,setBusy]=useState(false);
  async function submit(e:React.FormEvent){
   e.preventDefault();
-  if(password.length<8){setMsg('Password awal minimal 8 karakter.');return}
+  if(!supabase){setMsg('Koneksi Supabase belum tersedia.');return}
+  if(password.length<8||password.length>72){setMsg('Password awal harus 8–72 karakter.');return}
   setBusy(true);setMsg('');
-  const{data,error}=await supabase!.functions.invoke('invite-staff',{body:{email,full_name:name,role,password}});
-  setBusy(false);
-  if(error){setMsg(error.message);return}
-  setMsg(data?.message||data?.error||'Undangan diproses.');
-  if(data?.ok){setEmail('');setName('');setPassword('');setRole('journalist');onDone()}
+  try{
+   const{data,error}=await supabase.functions.invoke('invite-staff',{body:{email:email.trim().toLowerCase(),full_name:name.trim(),role,password}});
+   if(error){
+    let detail=error.message;
+    const response=(error as any).context;
+    if(response&&typeof response.clone==='function'){
+     const payload=await response.clone().json().catch(()=>null);
+     if(payload?.error)detail=String(payload.error);
+     else if(payload?.message)detail=String(payload.message);
+    }
+    setMsg(detail||'Undangan gagal diproses.');return;
+   }
+   if(data?.error){setMsg(String(data.error));return}
+   setMsg(data?.message||'Undangan diproses.');
+   if(data?.ok){setEmail('');setName('');setPassword('');setRole('journalist');onDone()}
+  }catch(error){
+   setMsg(error instanceof Error?error.message:'Koneksi gagal. Periksa internet lalu coba lagi.');
+  }finally{setBusy(false)}
  }
  return <form onSubmit={submit} style={{background:'white',border:'1px solid #eee',padding:18,borderRadius:10,margin:'20px 0'}}>
   <h3>Undang anggota redaksi</h3>
