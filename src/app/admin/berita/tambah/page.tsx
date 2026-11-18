@@ -37,6 +37,7 @@ export default function NewArticle(){
    let id=draftIdRef.current;
    if(id){const{error}=await supabase.from('articles').update(row).eq('id',id);if(error)throw error;}
    else{const{data,error}=await supabase.from('articles').insert({...row,slug:slugify(snapshot.title)+'-'+Date.now().toString().slice(-6)}).select('id').single();if(error)throw error;id=data.id;draftIdRef.current=id;setAutoDraftId(id);}
+   if(!id)throw new Error('ID draft tidak tersedia setelah penyimpanan.');
    await syncTags(id,snapshot.tags);
    setAutoMessage('Draft tersimpan otomatis pukul '+new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}));
   }catch(e:any){setAutoMessage('Draft otomatis belum tersimpan: '+(e?.message||'periksa koneksi'));}
