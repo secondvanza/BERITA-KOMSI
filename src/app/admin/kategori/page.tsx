@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {supabase} from '@/lib/supabase';
-const slugify=(s:string)=>s.toLowerCase().trim().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+const slugify=(s:string)=>s.toLowerCase().trim().normalize('NFD').replace(/\\p{Diacritic}/gu,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
 export default function Categories(){
  const[rows,setRows]=useState<any[]>([]);const[name,setName]=useState('');const[description,setDescription]=useState('');const[error,setError]=useState('');const[busy,setBusy]=useState(false);const[editing,setEditing]=useState<string|null>(null);const[editName,setEditName]=useState('');const[editDescription,setEditDescription]=useState('');
  async function load(){if(!supabase)return;const{data,error}=await supabase.from('categories').select('id,name,slug,description,sort_order').order('sort_order').order('name');if(error)setError(error.message);else setRows(data||[])}
