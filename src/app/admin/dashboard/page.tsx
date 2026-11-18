@@ -10,7 +10,7 @@ export default function Dashboard(){
  const router=useRouter();
  const[stats,setStats]=useState<Stats>({articles:0,published:0,review:0,views:0,viewsWeek:0,events:0,comments:0});
  const[recent,setRecent]=useState<any[]>([]);
- const[name,setName]=useState('Redaksi KOMSI');
+ const[name,setName]=useState('Redaksi KOMSI');const[role,setRole]=useState('');
  const[msg,setMsg]=useState('');
  const[loading,setLoading]=useState(true);
  useEffect(()=>{
@@ -22,7 +22,7 @@ export default function Dashboard(){
    const{data:profile,error:profileError}=await supabase.from('profiles').select('full_name,is_active').eq('id',user.id).maybeSingle();
    if(profileError||!profile?.is_active){await supabase.auth.signOut();router.replace('/admin/login');return}
    if(!active)return;
-   setName(profile.full_name||user.email||'Redaksi');
+   setName(profile.full_name||user.email||'Redaksi');setRole(profile.role||'');
    const weekStart=new Date(Date.now()-7*24*60*60*1000).toISOString();
    const[a,b,c,d,e,f,g]=await Promise.all([
     supabase.from('articles').select('*',{count:'exact',head:true}),
@@ -61,7 +61,7 @@ export default function Dashboard(){
   </div>
   {msg&&<p role="status" style={{color:'#b45309',marginTop:16}}>{msg}</p>}
   <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:15,marginTop:28}}>
-   {cards.map(([label,value,Icon])=><div key={label} style={stat}><Icon color="#c91f2c"/><div className="muted" style={{fontSize:13,marginTop:12}}>{label}</div><strong style={{fontSize:30}}>{loading?'—':value}</strong></div>)}
+   {cards.filter(([label])=>role!=='journalist'||!['Agenda','Komentar pending'].includes(label)).map(([label,value,Icon])=><div key={label} style={stat}><Icon color="#c91f2c"/><div className="muted" style={{fontSize:13,marginTop:12}}>{label}</div><strong style={{fontSize:30}}>{loading?'—':value}</strong></div>)}
   </div>
   <section style={{background:'white',border:'1px solid #eee',borderRadius:12,padding:22,marginTop:26}}>
    <h2 style={{fontSize:19}}>Berita terbaru</h2>
