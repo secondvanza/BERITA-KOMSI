@@ -21,13 +21,11 @@ export default async function Detail({params}:{params:Promise<{slug:string}>}){
  // Ambil artikel tanpa embedded profile/category agar RLS pada tabel profil tidak menggagalkan halaman detail.
  const{data:a,error}=await supabase.from('articles').select('id,title,slug,excerpt,content,featured_image,published_at,category_id,author_id,source_name,source_url').eq('slug',slug).eq('status','published').not('published_at','is',null).lte('published_at',new Date().toISOString()).maybeSingle();
  if(error||!a)notFound();
- const [categoryResult,tagResult,commentResult,profileResult]=await Promise.all([
+ const [categoryResult,tagResult,commentResult]=await Promise.all([
   a.category_id?supabase.from('categories').select('name,slug').eq('id',a.category_id).maybeSingle():Promise.resolve({data:null}),
   supabase.from('article_tags').select('tags(name,slug)').eq('article_id',a.id),
   supabase.from('comments').select('id,name,body,created_at').eq('article_id',a.id).eq('status','approved').order('created_at',{ascending:false}),
-  Promise.resolve({data:null})
  ]);
- // Profil penulis bersifat privat; nama publik menggunakan label redaksi.
  const category=categoryResult.data;
  const tagLinks=tagResult.data||[];
  const comments=commentResult.data||[];
