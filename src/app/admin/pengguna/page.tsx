@@ -28,9 +28,10 @@ export default function Users(){
   if(actorRole==='admin'&&(['admin','super_admin'].includes(target.role)||['admin','super_admin'].includes(newRole))){
    setMsg('Hanya super admin yang dapat mengelola akun admin dan super admin.');return
   }
-  const{error}=await supabase.rpc('admin_set_profile_role',{target_user_id:target.id,new_role:newRole});
-  setMsg(error?.message||'Peran berhasil diperbarui.');
-  if(!error)await load();
+  const{data,error}=await supabase.functions.invoke('admin-set-profile-role',{body:{target_user_id:target.id,new_role:newRole}});
+  if(error||data?.error){setMsg(error?.message||data?.error||'Gagal memperbarui peran.');return}
+  setMsg(data?.message||'Peran berhasil diperbarui.');
+  await load();
  }
  async function changeActive(target:any,value:boolean){
   if(!supabase)return;
