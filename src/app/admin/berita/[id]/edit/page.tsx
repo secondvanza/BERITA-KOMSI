@@ -54,6 +54,7 @@ export default function EditArticle(){
 
  async function save(){
   if(!supabase||forbidden||!title.trim())return;
+  if(status==='scheduled'&&(!publishers.includes(role)||!scheduledAt||new Date(scheduledAt).getTime()<=Date.now())){setMsg('Pilih waktu publikasi di masa depan.');return}
   setSaving(true);setMsg('');
   const{data:{user}}=await supabase.auth.getUser();
   if(!user){setMsg('Sesi login berakhir. Silakan masuk kembali.');setSaving(false);return}
