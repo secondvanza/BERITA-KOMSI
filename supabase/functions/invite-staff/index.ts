@@ -41,7 +41,7 @@ Deno.serve(async (req: Request) => {
   const fullName = String(body.full_name || "").trim();
   const role = String(body.role || "journalist");
   const password = String(body.password || "");
-  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || !fullName || fullName.length > 100 || password.length < 8 || password.length > 72 || !["journalist", "editor", "editor_in_chief"].includes(role)) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !fullName || fullName.length > 100 || password.length < 8 || password.length > 72 || !["journalist", "editor", "editor_in_chief"].includes(role)) {
     return new Response(JSON.stringify({ error: "Nama, email, atau peran tidak valid." }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
   }
 
