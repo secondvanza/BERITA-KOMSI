@@ -32,7 +32,7 @@ export default function NewArticle(){
   if(autoBusy.current){autoPending.current=true;return false}
   autoBusy.current=true;
   try{
-   const{data:{user}}=await supabase.auth.getUser();if(!user)return;
+   const{data:{user}}=await supabase.auth.getUser();if(!user)return false;
    const row={title:snapshot.title.trim(),excerpt:snapshot.excerpt.trim(),content:snapshot.content||{type:'doc',content:[]},category_id:snapshot.category||null,featured_image:snapshot.image.trim()||null,source_name:snapshot.source.trim()||null,source_url:snapshot.sourceUrl.trim()||null,author_id:user.id,status:'draft',scheduled_at:null,published_at:null};
    let id=draftIdRef.current;
    if(id){const{error}=await supabase.from('articles').update(row).eq('id',id);if(error)throw error;}
