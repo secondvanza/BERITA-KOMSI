@@ -6,7 +6,7 @@ import {supabase} from '@/lib/supabase';
 export default async function Search({searchParams}:{searchParams:Promise<{q?:string}>}){
  const{q=''}=await searchParams;
  const term=q.trim().slice(0,100);
- const safe=term.replace(/[%_,().]/g,' ').replace(/\s+/g,' ').trim();
+ const safe=term.replace(/[%_,()."\\:*]/g,' ').replace(/\s+/g,' ').trim();
  const{data}=safe&&supabase?await supabase.from('articles').select('id,title,slug,excerpt,published_at,categories(name)').eq('status','published').or('title.ilike.%'+safe+'%,excerpt.ilike.%'+safe+'%').order('published_at',{ascending:false}).limit(30):{data:[]};
  return <><PublicHeader/><main className="container" style={{padding:'45px 0',maxWidth:900}}>
   <span className="eyebrow">Pencarian portal</span><h1 className="section-title">Cari Berita KOMSI</h1>
