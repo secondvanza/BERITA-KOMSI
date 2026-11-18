@@ -1,4 +1,98 @@
 'use client';
-import {useEffect,useState} from 'react';import {supabase} from '@/lib/supabase';
-export default function Events(){const[rows,setRows]=useState<any[]>([]);const[title,setTitle]=useState('');const[location,setLocation]=useState('');const[date,setDate]=useState('');const[description,setDescription]=useState('');const[msg,setMsg]=useState('');async function load(){const{data}=await supabase!.from('events').select('*').order('starts_at',{ascending:false});setRows(data||[])}useEffect(()=>{load()},[]);async function add(e:React.FormEvent){e.preventDefault();const{data:{user}}=await supabase!.auth.getUser();const{error}=await supabase!.from('events').insert({title,slug:title.toLowerCase().trim().replace(/[^a-z0-9]+/g,'-')+'-'+Date.now().toString().slice(-4),location,starts_at:date||null,description,created_by:user?.id,status:'draft'});setMsg(error?.message||'Agenda disimpan sebagai draft.');if(!error){setTitle('');setLocation('');setDate('');setDescription('');load()}}async function publish(id:string){await supabase!.from('events').update({status:'published'}).eq('id',id);load()}return <><div className="eyebrow">Aktivitas komunitas</div><h1>Agenda Kegiatan</h1><form onSubmit={add} style={panel}><h3>Tambah agenda</h3><input required placeholder="Nama kegiatan" value={title} onChange={e=>setTitle(e.target.value)} style={field}/><input placeholder="Lokasi" value={location} onChange={e=>setLocation(e.target.value)} style={field}/><input type="datetime-local" value={date} onChange={e=>setDate(e.target.value)} style={field}/><textarea placeholder="Deskripsi kegiatan" value={description} onChange={e=>setDescription(e.target.value)} style={field}/><button style={primary}>Simpan agenda</button>{msg&&<p>{msg}</p>}</form><div style={{...panel,marginTop:20}}>{rows.map(e=><div key={e.id} style={{padding:12,borderBottom:'1px solid #eee'}}><b>{e.title}</b><p className="muted">{e.location||'Lokasi belum ditentukan'} · {e.status}</p>{e.status==='draft'&&<button onClick={()=>publish(e.id)}>Terbitkan</button>}</div>)}</div></>}
-const panel:React.CSSProperties={background:'white',border:'1px solid #eee',padding:18,borderRadius:10};const field:React.CSSProperties={display:'block',width:'100%',padding:11,border:'1px solid #ddd',borderRadius:6,margin:'9px 0'};const primary:React.CSSProperties={background:'#c91f2c',color:'white',border:0,padding:11,borderRadius:6};
+import {useEffect,useState} from 'react';
+import {supabase} from '@/lib/supabase';
+
+const localDate=(value:string|null)=>{if(!value)return '';const d=new Date(value);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)};
+const slugify=(value:string)=>value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+
+export default function Events(){
+ const[rows,setRows]=useState<any[]>([]);
+ const[title,setTitle]=useState('');
+ const[location,setLocation]=useState('');
+ const[date,setDate]=useState('');
+ const[description,setDescription]=useState('');
+ const[editingId,setEditingId]=useState<string|null>(null);
+ const[msg,setMsg]=useState('');
+ const[busy,setBusy]=useState(false);
+
+ async function load(){
+  if(!supabase)return;
+  const{data,error}=await supabase.from('events').select('*').order('starts_at',{ascending:true,nullsFirst:false});
+  if(error)setMsg('Gagal memuat agenda: '+error.message);
+  else setRows(data||[]);
+ }
+ useEffect(()=>{load()},[]);
+
+ function reset(){
+  setTitle('');setLocation('');setDate('');setDescription('');setEditingId(null);
+ }
+ function edit(event:any){
+  setEditingId(event.id);setTitle(event.title||'');setLocation(event.location||'');
+  setDate(localDate(event.starts_at));setDescription(event.description||'');
+  setMsg('');
+  window.scrollTo({top:0,behavior:'smooth'});
+ }
+ async function save(e:React.FormEvent){
+  e.preventDefault();
+  if(!supabase||!title.trim())return;
+  setBusy(true);setMsg('');
+  const{data:{user}}=await supabase.auth.getUser();
+  if(!user){setMsg('Sesi login berakhir. Silakan masuk kembali.');setBusy(false);return}
+  const values={title:title.trim(),location:location.trim()||null,starts_at:date?new Date(date).toISOString():null,description:description.trim()||null};
+  const result=editingId
+   ? await supabase.from('events').update(values).eq('id',editingId)
+   : await supabase.from('events').insert({...values,slug:slugify(title)+'-'+Date.now().toString().slice(-5),created_by:user.id,status:'draft'});
+  if(result.error)setMsg('Gagal menyimpan agenda: '+result.error.message);
+  else{setMsg(editingId?'Agenda berhasil diperbarui.':'Agenda disimpan sebagai draft.');reset();await load()}
+  setBusy(false);
+ }
+ async function changeStatus(event:any,status:'draft'|'published'|'cancelled'){
+  if(!supabase)return;
+  const{error}=await supabase.from('events').update({status}).eq('id',event.id);
+  if(error)setMsg('Gagal mengubah status: '+error.message);
+  else{setMsg('Status agenda berhasil diperbarui.');await load()}
+ }
+ async function remove(event:any){
+  if(!supabase||!confirm('Hapus agenda “'+event.title+'” secara permanen?'))return;
+  const{error}=await supabase.from('events').delete().eq('id',event.id);
+  if(error)setMsg('Gagal menghapus agenda: '+error.message);
+  else{setMsg('Agenda berhasil dihapus.');await load();if(editingId===event.id)reset()}
+ }
+
+ return <>
+  <div className="eyebrow">Aktivitas komunitas</div><h1>Agenda Kegiatan</h1>
+  <form onSubmit={save} style={panel}>
+   <h3>{editingId?'Edit agenda':'Tambah agenda'}</h3>
+   <input required maxLength={180} placeholder="Nama kegiatan" value={title} onChange={e=>setTitle(e.target.value)} style={field}/>
+   <input maxLength={180} placeholder="Lokasi" value={location} onChange={e=>setLocation(e.target.value)} style={field}/>
+   <label style={{fontSize:13}}>Tanggal dan waktu kegiatan</label>
+   <input type="datetime-local" value={date} onChange={e=>setDate(e.target.value)} style={field}/>
+   <textarea maxLength={10000} placeholder="Deskripsi kegiatan" value={description} onChange={e=>setDescription(e.target.value)} style={field}/>
+   <div style={{display:'flex',gap:9,flexWrap:'wrap'}}>
+    <button disabled={busy||!title.trim()} style={primary}>{busy?'Menyimpan…':editingId?'Simpan perubahan':'Simpan sebagai draft'}</button>
+    {editingId&&<button type="button" onClick={reset} style={secondary}>Batal edit</button>}
+   </div>
+   {msg&&<p role="status">{msg}</p>}
+  </form>
+  <div style={{...panel,marginTop:20}}>
+   <h3>Daftar agenda ({rows.length})</h3>
+   {!rows.length&&<p className="muted">Belum ada agenda.</p>}
+   {rows.map(event=><div key={event.id} style={{padding:12,borderBottom:'1px solid #eee'}}>
+    <b>{event.title}</b>
+    <p className="muted">{event.location||'Lokasi belum ditentukan'} · {event.starts_at?new Date(event.starts_at).toLocaleString('id-ID'):'Jadwal menyusul'} · {event.status}</p>
+    {event.description&&<p>{event.description}</p>}
+    <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+     <button type="button" onClick={()=>edit(event)}>Edit</button>
+     {event.status!=='published'&&<button type="button" onClick={()=>changeStatus(event,'published')}>Terbitkan</button>}
+     {event.status==='published'&&<button type="button" onClick={()=>changeStatus(event,'draft')}>Tarik publikasi</button>}
+     <button type="button" onClick={()=>changeStatus(event,'cancelled')}>Batalkan</button>
+     <button type="button" onClick={()=>remove(event)} style={{color:'#c91f2c'}}>Hapus</button>
+    </div>
+   </div>)}
+  </div>
+ </>;
+}
+const panel:React.CSSProperties={background:'white',border:'1px solid #eee',padding:18,borderRadius:10};
+const field:React.CSSProperties={display:'block',width:'100%',padding:11,border:'1px solid #ddd',borderRadius:6,margin:'9px 0'};
+const primary:React.CSSProperties={background:'#c91f2c',color:'white',border:0,padding:11,borderRadius:6};
+const secondary:React.CSSProperties={background:'white',border:'1px solid #ddd',padding:11,borderRadius:6};
