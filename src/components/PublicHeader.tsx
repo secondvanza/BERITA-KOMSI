@@ -6,7 +6,7 @@ export default async function PublicHeader(){
   supabase.from('site_settings').select('key,value').in('key',['site_name','tagline','logo_url']),
   supabase.from('categories').select('name,slug').order('sort_order').limit(8)
  ]):[{data:[]},{data:[]}];
- const settings=Object.fromEntries((settingsRows||[]).map((row:any)=>[row.key,row.value]));
+ const cleanSetting=(value:any)=>typeof value==='string'?value.replace(/^\"|\"$/g,''):value;const settings=Object.fromEntries((settingsRows||[]).map((row:any)=>[row.key,cleanSetting(row.value)]));
  return <header style={{background:'#fff',borderBottom:'1px solid #e8e8e8'}}>
   <div style={{background:'#171717',color:'#eee',fontSize:11,padding:'8px 0'}}><div className="container" style={{display:'flex',justifyContent:'space-between',gap:10}}><span>PORTAL INFORMASI KOMUNITAS SENI KOMSI</span><span>HARMONIS • KRITIS • KREATIF</span></div></div>
   <div className="container" style={{minHeight:88,display:'flex',alignItems:'center',justifyContent:'space-between',gap:18,flexWrap:'wrap',paddingTop:12,paddingBottom:12}}>
