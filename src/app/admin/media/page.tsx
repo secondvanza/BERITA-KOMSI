@@ -51,7 +51,7 @@ export default function Media(){
  async function setAsLogo(m:any){
   if(!supabase||!['admin','super_admin'].includes(role)){setMsg('Hanya admin yang dapat mengganti logo website.');return}
   const url=supabase.storage.from('komsi-media').getPublicUrl(m.file_path).data.publicUrl;
-  const{error}=await supabase.from('site_settings').upsert({key:'logo_url',value:JSON.stringify(url)});
+  const{error}=await supabase.from('site_settings').upsert({key:'logo_url',value:url});
   setMsg(error?.message||'Logo KOMSI berhasil diterapkan pada website.');
  }
  async function copyUrl(m:any){
