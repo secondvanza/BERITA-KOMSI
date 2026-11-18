@@ -51,7 +51,8 @@ export default function AdminShell({children}:{children:React.ReactNode}){
  },[isPublic,path,router]);
 
  if(isPublic)return <>{children}</>;
- if(checking)return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',background:'#f7f7f7',color:'#555'}}>Memeriksa akses ruang redaksi…</main>;\n if(!canAccessAdminPath(role,path))return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',padding:24,textAlign:'center',background:'#f7f7f7'}}><div><h1>Akses dibatasi</h1><p>Akun Anda tidak memiliki izin untuk membuka halaman ini.</p><Link href='/admin/dashboard' style={{color:'#c91f2c',fontWeight:700}}>Kembali ke dashboard</Link></div></main>;
+ if(checking)return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',background:'#f7f7f7',color:'#555'}}>Memeriksa akses ruang redaksi…</main>;
+ if(!canAccessAdminPath(role,path))return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',padding:24,textAlign:'center',background:'#f7f7f7'}}><div><h1>Akses dibatasi</h1><p>Akun Anda tidak memiliki izin untuk membuka halaman ini.</p><Link href='/admin/dashboard' style={{color:'#c91f2c',fontWeight:700}}>Kembali ke dashboard</Link></div></main>;
 
  async function logout(){await supabase?.auth.signOut();router.replace('/admin/login')}
  const allowed=(href:string)=>canAccessAdminPath(role,href);
