@@ -19,7 +19,7 @@ export default function Dashboard(){
    if(!supabase){router.replace('/admin/login');return}
    const{data:{user}}=await supabase.auth.getUser();
    if(!user){router.replace('/admin/login');return}
-   const{data:profile,error:profileError}=await supabase.from('profiles').select('full_name,is_active').eq('id',user.id).maybeSingle();
+   const{data:profile,error:profileError}=await supabase.from('profiles').select('full_name,role,is_active').eq('id',user.id).maybeSingle();
    if(profileError||!profile?.is_active){await supabase.auth.signOut();router.replace('/admin/login');return}
    if(!active)return;
    setName(profile.full_name||user.email||'Redaksi');setRole(profile.role||'');
