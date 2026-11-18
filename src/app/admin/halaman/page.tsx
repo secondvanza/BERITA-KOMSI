@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {supabase} from '@/lib/supabase';
+import ArticleEditor from '@/components/ArticleEditor';
 
 const slugify=(s:string)=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
 
@@ -8,7 +9,7 @@ export default function Pages(){
  const[rows,setRows]=useState<any[]>([]);
  const[title,setTitle]=useState('');
  const[slug,setSlug]=useState('');
- const[body,setBody]=useState('');
+ const[body,setBody]=useState<any>({type:'doc',content:[{type:'paragraph',content:[]}]});
  const[msg,setMsg]=useState('');
  const[editingId,setEditingId]=useState<string|null>(null);
  const[busy,setBusy]=useState(false);
@@ -20,19 +21,19 @@ export default function Pages(){
   else setRows(data||[]);
  }
  useEffect(()=>{load()},[]);
- function reset(){setTitle('');setSlug('');setBody('');setEditingId(null)}
+ function reset(){setTitle('');setSlug('');setBody({type:'doc',content:[{type:'paragraph',content:[]}]});setEditingId(null)}
  function edit(page:any){
   setEditingId(page.id);setTitle(page.title||'');setSlug(page.slug||'');
-  setBody(page.content?.text||'');setMsg('');
+  setBody(page.content?.type==='doc'?page.content:{type:'doc',content:(page.content?.text||'').split('\n').filter(Boolean).map((line:string)=>({type:'paragraph',content:[{type:'text',text:line}]}))});setMsg('');
   window.scrollTo({top:0,behavior:'smooth'});
  }
  async function save(e:React.FormEvent){
   e.preventDefault();
-  if(!supabase||!title.trim()||!body.trim())return;
+  if(!supabase||!title.trim())return;
   const finalSlug=slugify(slug||title);
   if(!finalSlug){setMsg('Slug halaman tidak valid.');return}
   setBusy(true);setMsg('');
-  const values={title:title.trim(),slug:finalSlug,content:{text:body.trim()}};
+  const values={title:title.trim(),slug:finalSlug,content:body};
   const result=editingId
    ? await supabase.from('pages').update(values).eq('id',editingId)
    : await supabase.from('pages').insert({...values,is_published:false});
@@ -59,9 +60,9 @@ export default function Pages(){
    <h3>{editingId?'Edit halaman':'Buat halaman'}</h3>
    <input required maxLength={180} placeholder="Judul halaman" value={title} onChange={e=>setTitle(e.target.value)} style={field}/>
    <input maxLength={180} placeholder="Slug URL (opsional)" value={slug} onChange={e=>setSlug(e.target.value)} style={field}/>
-   <textarea required maxLength={30000} rows={6} placeholder="Isi halaman" value={body} onChange={e=>setBody(e.target.value)} style={field}/>
+   <div style={{margin:'10px 0 18px'}}><ArticleEditor value={body} onChange={setBody}/></div>
    <div style={{display:'flex',gap:9,flexWrap:'wrap'}}>
-    <button disabled={busy||!title.trim()||!body.trim()} style={primary}>{busy?'Menyimpan…':editingId?'Simpan perubahan':'Simpan draft'}</button>
+    <button disabled={busy||!title.trim()} style={primary}>{busy?'Menyimpan…':editingId?'Simpan perubahan':'Simpan draft'}</button>
     {editingId&&<button type="button" onClick={reset} style={secondary}>Batal edit</button>}
    </div>
    {msg&&<p role="status">{msg}</p>}
