@@ -54,14 +54,7 @@ export default function AdminShell({children}:{children:React.ReactNode}){
  if(checking)return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',background:'#f7f7f7',color:'#555'}}>Memeriksa akses ruang redaksi…</main>;\n if(!canAccessAdminPath(role,path))return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',padding:24,textAlign:'center',background:'#f7f7f7'}}><div><h1>Akses dibatasi</h1><p>Akun Anda tidak memiliki izin untuk membuka halaman ini.</p><Link href='/admin/dashboard' style={{color:'#c91f2c',fontWeight:700}}>Kembali ke dashboard</Link></div></main>;
 
  async function logout(){await supabase?.auth.signOut();router.replace('/admin/login')}
- const allowed=(href:string)=>{
-  if(['super_admin','admin'].includes(role))return true;
-  if(href==='/admin/pengguna'||href==='/admin/pengaturan')return false;
-  if(role==='journalist')return ['/admin/dashboard','/admin/berita','/admin/media','/admin/revisi'].includes(href);
-  if(role==='editor')return true;
-  if(role==='editor_in_chief')return true;
-  return false;
- };
+ const allowed=(href:string)=>canAccessAdminPath(role,href);
  return <div className="admin-shell">
   <aside className="admin-side">
    <Link href="/admin/dashboard" style={{fontWeight:950,fontSize:23,margin:'4px 10px'}}>KOMSI <span style={{color:'#ff555d'}}>ADMIN</span></Link>
