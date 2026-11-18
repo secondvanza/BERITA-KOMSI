@@ -1,15 +1,16 @@
+export const revalidate = 60;
 import Link from 'next/link';
 import {supabase} from '@/lib/supabase';
 import PublicHeader from '@/components/PublicHeader';
 import PublicFooter from '@/components/PublicFooter';
 
 export default async function Agenda(){
- const{data:events,error}=supabase?await supabase.from('events').select('id,title,slug,location,starts_at,ends_at,description,cover_image').eq('status','published').order('starts_at',{ascending:true,nullsFirst:false}):{data:[],error:null};
+ const{data:events,error}=supabase?await supabase.from('events').select('id,title,slug,location,starts_at,ends_at,description,cover_image').eq('status','published').order('starts_at',{ascending:true,nullsFirst:false}).limit(50):{data:[],error:null};
  const rows=events||[];
  const upcoming=rows.filter(e=>!e.starts_at||new Date(e.starts_at).getTime()>=Date.now());
  const past=rows.filter(e=>e.starts_at&&new Date(e.starts_at).getTime()<Date.now());
  const card=(e:any)=><article key={e.id} style={{background:'white',border:'1px solid #eee',borderRadius:10,overflow:'hidden'}}>
-  {e.cover_image&&<Link href={'/agenda/'+e.slug}><img src={e.cover_image} alt={e.title} style={{width:'100%',height:190,objectFit:'cover',display:'block'}}/></Link>}
+  {e.cover_image&&<Link href={'/agenda/'+e.slug}><img src={e.cover_image} alt={e.title} loading="lazy" decoding="async" style={{width:'100%',height:190,objectFit:'cover',display:'block'}}/></Link>}
   <div style={{padding:22}}><span className="eyebrow">{e.starts_at?new Date(e.starts_at).toLocaleString('id-ID',{dateStyle:'long',timeStyle:'short',timeZone:'Asia/Jakarta'}):'Jadwal menyusul'}</span>
    <h2 style={{fontSize:21,lineHeight:1.3}}><Link href={'/agenda/'+e.slug}>{e.title}</Link></h2><p className="muted">{e.location||'Lokasi menyusul'}</p>
    <p>{(e.description||'').slice(0,180)}{(e.description||'').length>180?'…':''}</p>
