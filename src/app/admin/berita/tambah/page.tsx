@@ -23,7 +23,20 @@ export default function NewArticle(){
   if(!supabase)return;
   const[{data:{user}},{data:c},{data:t}]=await Promise.all([supabase.auth.getUser(),supabase.from('categories').select('id,name').order('sort_order'),supabase.from('tags').select('id,name').order('name')]);
   if(!active)return;setCategories(c||[]);setTags(t||[]);
-  if(user){const{data:p}=await supabase.from('profiles').select('role').eq('id',user.id).maybeSingle();if(active)setRole(p?.role||'');}
+  if(user){
+   const{data:p}=await supabase.from('profiles').select('role').eq('id',user.id).maybeSingle();
+   if(active)setRole(p?.role||'');
+   const storageKey='komsi:article-draft:'+user.id;
+   const savedId=window.localStorage.getItem(storageKey);
+   if(savedId){
+    const{data:draft}=await supabase.from('articles').select('id,title,excerpt,content,category_id,featured_image,source_name,source_url').eq('id',savedId).eq('author_id',user.id).eq('status','draft').maybeSingle();
+    if(!active)return;
+    if(draft){
+     const[{data:links}]=await Promise.all([supabase.from('article_tags').select('tag_id').eq('article_id',draft.id)]);
+     setTitle(draft.title||'');setExcerpt(draft.excerpt||'');setContent(draft.content);setCategory(draft.category_id||'');setImage(draft.featured_image||'');setSource(draft.source_name||'');setSourceUrl(draft.source_url||'');setSelectedTags((links||[]).map((x:any)=>x.tag_id));draftIdRef.current=draft.id;setAutoDraftId(draft.id);setAutoMessage('Draft sebelumnya dipulihkan. Perubahan berikutnya akan tersimpan otomatis.');
+    }else{window.localStorage.removeItem(storageKey);}
+   }
+  }
  })();return()=>{active=false}},[]);
 
  async function syncTags(articleId:string,ids:string[]){const del=await supabase!.from('article_tags').delete().eq('article_id',articleId);if(del.error)throw del.error;if(ids.length){const ins=await supabase!.from('article_tags').insert(ids.map(tag_id=>({article_id:articleId,tag_id})));if(ins.error)throw ins.error;}}
@@ -36,7 +49,7 @@ export default function NewArticle(){
    const row={title:snapshot.title.trim(),excerpt:snapshot.excerpt.trim(),content:snapshot.content||{type:'doc',content:[]},category_id:snapshot.category||null,featured_image:snapshot.image.trim()||null,source_name:snapshot.source.trim()||null,source_url:snapshot.sourceUrl.trim()||null,author_id:user.id,status:'draft',scheduled_at:null,published_at:null};
    let id=draftIdRef.current;
    if(id){const{error}=await supabase.from('articles').update(row).eq('id',id);if(error)throw error;}
-   else{const{data,error}=await supabase.from('articles').insert({...row,slug:slugify(snapshot.title)+'-'+Date.now().toString().slice(-6)}).select('id').single();if(error)throw error;id=data.id;draftIdRef.current=id;setAutoDraftId(id);}
+   else{const{data,error}=await supabase.from('articles').insert({...row,slug:slugify(snapshot.title)+'-'+Date.now().toString().slice(-6)}).select('id').single();if(error)throw error;id=data.id;draftIdRef.current=id;setAutoDraftId(id);window.localStorage.setItem('komsi:article-draft:'+user.id,id);}
    if(!id)throw new Error('ID draft tidak tersedia setelah penyimpanan.');
    await syncTags(id,snapshot.tags);
    setAutoMessage('Draft tersimpan otomatis pukul '+new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}));
@@ -57,7 +70,7 @@ export default function NewArticle(){
   if(!draftSaved||!id){setMessage('Draft belum dapat disimpan. Periksa koneksi lalu coba lagi.');setBusy(false);return}
   finalizing.current=true;
   const{error}=await supabase.from('articles').update({status,scheduled_at:status==='scheduled'?new Date(scheduled).toISOString():null,published_at:null}).eq('id',id);
-  setBusy(false);if(error){finalizing.current=false;setMessage('Gagal menyimpan berita: '+error.message);return}router.push('/admin/berita');
+  setBusy(false);if(error){finalizing.current=false;setMessage('Gagal menyimpan berita: '+error.message);return}if(status!=='draft')window.localStorage.removeItem('komsi:article-draft:'+user.id);router.push('/admin/berita');
  }
  return <div style={{maxWidth:1000}}>
   <div className="eyebrow">Redaksi / Berita</div><h1>Tulis berita baru</h1>
