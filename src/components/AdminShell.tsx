@@ -7,6 +7,13 @@ import {LayoutDashboard,Newspaper,FolderOpen,Image,CalendarDays,Users,Settings,L
 
 const nav=[['Dashboard','/admin/dashboard',LayoutDashboard],['Berita','/admin/berita',Newspaper],['Kategori','/admin/kategori',FolderOpen],['Tag','/admin/tag',FolderOpen],['Halaman','/admin/halaman',FolderOpen],['Media','/admin/media',Image],['Agenda','/admin/agenda',CalendarDays],['Komentar','/admin/komentar',MessageSquare],['Revisi','/admin/revisi',Newspaper],['Newsletter','/admin/newsletter',MessageSquare],['Pengguna','/admin/pengguna',Users],['Pengaturan','/admin/pengaturan',Settings]] as const;
 const publicPaths=['/admin/login','/admin/reset-password'];
+function canAccessAdminPath(role:string,path:string){
+ if(['super_admin','admin'].includes(role))return true;
+ if(path==='/admin/pengguna'||path==='/admin/pengaturan')return false;
+ if(role==='journalist')return ['/admin/dashboard','/admin/berita','/admin/media','/admin/revisi'].some(root=>path===root||path.startsWith(root+'/'));
+ if(role==='editor'||role==='editor_in_chief')return true;
+ return false;
+}
 
 export default function AdminShell({children}:{children:React.ReactNode}){
  const path=usePathname();
@@ -27,7 +34,7 @@ export default function AdminShell({children}:{children:React.ReactNode}){
    if(!session){router.replace('/admin/login');return}
    const {data:profile,error}=await supabase.from('profiles').select('full_name,role,is_active').eq('id',session.user.id).maybeSingle();
    if(!alive)return;
-   if(error||!profile||!profile.is_active){
+   if(error||!profile||!profile.is_active||!['super_admin','admin','editor','editor_in_chief','journalist'].includes(profile.role||'')){
     await supabase.auth.signOut();
     router.replace('/admin/login');
     return;
@@ -44,7 +51,7 @@ export default function AdminShell({children}:{children:React.ReactNode}){
  },[isPublic,path,router]);
 
  if(isPublic)return <>{children}</>;
- if(checking)return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',background:'#f7f7f7',color:'#555'}}>Memeriksa akses ruang redaksi…</main>;
+ if(checking)return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',background:'#f7f7f7',color:'#555'}}>Memeriksa akses ruang redaksi…</main>;\n if(!canAccessAdminPath(role,path))return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',padding:24,textAlign:'center',background:'#f7f7f7'}}><div><h1>Akses dibatasi</h1><p>Akun Anda tidak memiliki izin untuk membuka halaman ini.</p><Link href='/admin/dashboard' style={{color:'#c91f2c',fontWeight:700}}>Kembali ke dashboard</Link></div></main>;
 
  async function logout(){await supabase?.auth.signOut();router.replace('/admin/login')}
  const allowed=(href:string)=>{
