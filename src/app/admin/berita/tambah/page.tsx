@@ -15,7 +15,7 @@ export default function NewArticle(){
  const[scheduled,setScheduled]=useState('');const[categories,setCategories]=useState<any[]>([]);const[tags,setTags]=useState<any[]>([]);const[selectedTags,setSelectedTags]=useState<string[]>([]);
  const[role,setRole]=useState('');const[busy,setBusy]=useState(false);const[message,setMessage]=useState('');const[autoMessage,setAutoMessage]=useState('Draft otomatis akan aktif setelah judul diisi.');
  const[autoDraftId,setAutoDraftId]=useState<string|null>(null);
- const autoBusy=useRef(false);const autoPending=useRef(false);
+ const autoBusy=useRef(false);const autoPending=useRef(false);const draftIdRef=useRef<string|null>(null);
  const latest=useRef<Snapshot>({title:'',excerpt:'',content:null,category:'',image:'',source:'',sourceUrl:'',tags:[]});
  latest.current={title,excerpt,content,category,image,source,sourceUrl,tags:selectedTags};
 
@@ -34,9 +34,9 @@ export default function NewArticle(){
   try{
    const{data:{user}}=await supabase.auth.getUser();if(!user)return;
    const row={title:snapshot.title.trim(),excerpt:snapshot.excerpt.trim(),content:snapshot.content||{type:'doc',content:[]},category_id:snapshot.category||null,featured_image:snapshot.image.trim()||null,source_name:snapshot.source.trim()||null,source_url:snapshot.sourceUrl.trim()||null,author_id:user.id,status:'draft',scheduled_at:null,published_at:null};
-   let id=autoDraftId;
+   let id=draftIdRef.current;
    if(id){const{error}=await supabase.from('articles').update(row).eq('id',id);if(error)throw error;}
-   else{const{data,error}=await supabase.from('articles').insert({...row,slug:slugify(snapshot.title)+'-'+Date.now().toString().slice(-6)}).select('id').single();if(error)throw error;id=data.id;setAutoDraftId(id);}
+   else{const{data,error}=await supabase.from('articles').insert({...row,slug:slugify(snapshot.title)+'-'+Date.now().toString().slice(-6)}).select('id').single();if(error)throw error;id=data.id;draftIdRef.current=id;setAutoDraftId(id);}
    await syncTags(id,snapshot.tags);
    setAutoMessage('Draft tersimpan otomatis pukul '+new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}));
   }catch(e:any){setAutoMessage('Draft otomatis belum tersimpan: '+(e?.message||'periksa koneksi'));}
@@ -51,7 +51,7 @@ export default function NewArticle(){
   const{data:{user}}=await supabase.auth.getUser();if(!user){setMessage('Sesi login berakhir. Silakan masuk kembali.');setBusy(false);router.push('/admin/login');return}
   while(autoBusy.current)await new Promise(r=>window.setTimeout(r,100));
   await saveAuto(latest.current);while(autoBusy.current)await new Promise(r=>window.setTimeout(r,100));
-  const id=autoDraftId;
+  const id=draftIdRef.current;
   if(!id){setMessage('Draft belum dapat disimpan. Periksa koneksi lalu coba lagi.');setBusy(false);return}
   const{error}=await supabase.from('articles').update({status,scheduled_at:status==='scheduled'?new Date(scheduled).toISOString():null,published_at:null}).eq('id',id);
   setBusy(false);if(error){setMessage('Gagal menyimpan berita: '+error.message);return}router.push('/admin/berita');
