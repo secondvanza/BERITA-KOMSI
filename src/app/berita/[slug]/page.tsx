@@ -1,3 +1,4 @@
+export const revalidate = 60;
 import {Fragment} from 'react';
 import {notFound} from 'next/navigation';
 import {supabase} from '@/lib/supabase';
