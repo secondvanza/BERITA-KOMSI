@@ -12,6 +12,7 @@ export default function Media(){
  const[busy,setBusy]=useState(false);
  const[msg,setMsg]=useState('');
  const[role,setRole]=useState('');
+ const[altDrafts,setAltDrafts]=useState<Record<string,string>>({});
  async function load(){
   if(!supabase)return;
   const[{data,error},{data:{user}}]=await Promise.all([
@@ -19,7 +20,7 @@ export default function Media(){
    supabase.auth.getUser()
   ]);
   if(error)setMsg('Gagal memuat pustaka media: '+error.message);
-  else setRows(data||[]);
+  else {setRows(data||[]);setAltDrafts(Object.fromEntries((data||[]).map((item:any)=>[item.id,item.alt_text||''])))}
   if(user){
    const{data:profile}=await supabase.from('profiles').select('role').eq('id',user.id).maybeSingle();
    setRole(profile?.role||'');
@@ -54,6 +55,13 @@ export default function Media(){
   const{error}=await supabase.from('site_settings').upsert({key:'logo_url',value:url});
   setMsg(error?.message||'Logo KOMSI berhasil diterapkan pada website.');
  }
+ async function saveAltText(m:any){
+  if(!supabase)return;
+  const altText=(altDrafts[m.id]||'').trim();
+  const{error}=await supabase.from('media').update({alt_text:altText||null}).eq('id',m.id);
+  setMsg(error?'Gagal menyimpan teks alternatif: '+error.message:'Teks alternatif berhasil disimpan.');
+  if(!error)await load();
+ }
  async function copyUrl(m:any){
   if(!supabase)return;
   const url=supabase.storage.from('komsi-media').getPublicUrl(m.file_path).data.publicUrl;
@@ -83,6 +91,10 @@ export default function Media(){
    {rows.map(m=><article key={m.id} style={panel}>
     <img src={supabase!.storage.from('komsi-media').getPublicUrl(m.file_path).data.publicUrl} alt={m.alt_text||m.file_name} style={{width:'100%',height:125,objectFit:'cover',borderRadius:6}}/>
     <p style={{fontSize:12,overflowWrap:'anywhere'}}>{m.file_name}</p>
+    <label style={{display:'block',fontSize:11,color:'#666'}}>Teks alternatif (alt text)
+     <input value={altDrafts[m.id]??''} maxLength={250} onChange={e=>setAltDrafts(v=>({...v,[m.id]:e.target.value}))} placeholder="Deskripsi singkat gambar" style={{width:'100%',padding:7,border:'1px solid #ddd',borderRadius:5,marginTop:4}}/>
+    </label>
+    <button type="button" onClick={()=>saveAltText(m)} style={{fontSize:11}}>Simpan alt text</button>
     <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
      <button title="Salin URL" onClick={()=>copyUrl(m)}><Copy size={15}/></button>
      {isAdmin&&<button title="Jadikan logo website" onClick={()=>setAsLogo(m)} style={{fontSize:11,fontWeight:700}}>Jadikan logo</button>}
