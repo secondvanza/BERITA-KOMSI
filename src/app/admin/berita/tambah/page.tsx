@@ -15,7 +15,7 @@ export default function NewArticle(){
  const[scheduled,setScheduled]=useState('');const[categories,setCategories]=useState<any[]>([]);const[tags,setTags]=useState<any[]>([]);const[selectedTags,setSelectedTags]=useState<string[]>([]);
  const[role,setRole]=useState('');const[busy,setBusy]=useState(false);const[message,setMessage]=useState('');const[autoMessage,setAutoMessage]=useState('Draft otomatis akan aktif setelah judul diisi.');
  const[autoDraftId,setAutoDraftId]=useState<string|null>(null);
- const autoBusy=useRef(false);const autoPending=useRef(false);const draftIdRef=useRef<string|null>(null);
+ const autoBusy=useRef(false);const autoPending=useRef(false);const draftIdRef=useRef<string|null>(null);const finalizing=useRef(false);
  const latest=useRef<Snapshot>({title:'',excerpt:'',content:null,category:'',image:'',source:'',sourceUrl:'',tags:[]});
  latest.current={title,excerpt,content,category,image,source,sourceUrl,tags:selectedTags};
 
@@ -27,9 +27,9 @@ export default function NewArticle(){
  })();return()=>{active=false}},[]);
 
  async function syncTags(articleId:string,ids:string[]){const del=await supabase!.from('article_tags').delete().eq('article_id',articleId);if(del.error)throw del.error;if(ids.length){const ins=await supabase!.from('article_tags').insert(ids.map(tag_id=>({article_id:articleId,tag_id})));if(ins.error)throw ins.error;}}
- async function saveAuto(snapshot:Snapshot){
-  if(!supabase||!snapshot.title.trim())return;
-  if(autoBusy.current){autoPending.current=true;return}
+ async function saveAuto(snapshot:Snapshot):Promise<boolean>{
+  if(!supabase||!snapshot.title.trim()||finalizing.current)return false;
+  if(autoBusy.current){autoPending.current=true;return false}
   autoBusy.current=true;
   try{
    const{data:{user}}=await supabase.auth.getUser();if(!user)return;
@@ -40,7 +40,8 @@ export default function NewArticle(){
    if(!id)throw new Error('ID draft tidak tersedia setelah penyimpanan.');
    await syncTags(id,snapshot.tags);
    setAutoMessage('Draft tersimpan otomatis pukul '+new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}));
-  }catch(e:any){setAutoMessage('Draft otomatis belum tersimpan: '+(e?.message||'periksa koneksi'));}
+   return true;
+  }catch(e:any){setAutoMessage('Draft otomatis belum tersimpan: '+(e?.message||'periksa koneksi'));return false;}
   finally{autoBusy.current=false;if(autoPending.current){autoPending.current=false;window.setTimeout(()=>void saveAuto(latest.current),500);}}
  }
  useEffect(()=>{if(title.trim().length<3)return;const timer=window.setTimeout(()=>void saveAuto(latest.current),1200);return()=>window.clearTimeout(timer)},[title,excerpt,content,category,image,source,sourceUrl,selectedTags]);
@@ -51,11 +52,12 @@ export default function NewArticle(){
   setBusy(true);setMessage('');
   const{data:{user}}=await supabase.auth.getUser();if(!user){setMessage('Sesi login berakhir. Silakan masuk kembali.');setBusy(false);router.push('/admin/login');return}
   while(autoBusy.current)await new Promise(r=>window.setTimeout(r,100));
-  await saveAuto(latest.current);while(autoBusy.current)await new Promise(r=>window.setTimeout(r,100));
+  const draftSaved=await saveAuto(latest.current);while(autoBusy.current)await new Promise(r=>window.setTimeout(r,100));
   const id=draftIdRef.current;
-  if(!id){setMessage('Draft belum dapat disimpan. Periksa koneksi lalu coba lagi.');setBusy(false);return}
+  if(!draftSaved||!id){setMessage('Draft belum dapat disimpan. Periksa koneksi lalu coba lagi.');setBusy(false);return}
+  finalizing.current=true;
   const{error}=await supabase.from('articles').update({status,scheduled_at:status==='scheduled'?new Date(scheduled).toISOString():null,published_at:null}).eq('id',id);
-  setBusy(false);if(error){setMessage('Gagal menyimpan berita: '+error.message);return}router.push('/admin/berita');
+  setBusy(false);if(error){finalizing.current=false;setMessage('Gagal menyimpan berita: '+error.message);return}router.push('/admin/berita');
  }
  return <div style={{maxWidth:1000}}>
   <div className="eyebrow">Redaksi / Berita</div><h1>Tulis berita baru</h1>
