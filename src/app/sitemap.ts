@@ -9,7 +9,7 @@ export default async function sitemap():Promise<MetadataRoute.Sitemap>{
   supabase.from('articles').select('slug,published_at,updated_at').eq('status','published').not('published_at','is',null).lte('published_at',new Date().toISOString()),
   supabase.from('categories').select('slug'),
   supabase.from('tags').select('slug'),
-  supabase.from('events').select('slug,updated_at').eq('status','published'),
+  supabase.from('events').select('slug,created_at').eq('status','published'),
   supabase.from('pages').select('slug,updated_at').eq('is_published',true)
  ]);
  const urls:MetadataRoute.Sitemap=[
@@ -19,7 +19,7 @@ export default async function sitemap():Promise<MetadataRoute.Sitemap>{
   ...(nowArticles.data||[]).map(a=>({url:base+'/berita/'+a.slug,lastModified:a.updated_at?new Date(a.updated_at):a.published_at?new Date(a.published_at):new Date()})),
   ...(nowCategories.data||[]).map(c=>({url:base+'/kategori/'+c.slug})),
   ...(nowTags.data||[]).map(t=>({url:base+'/tag/'+t.slug})),
-  ...(nowEvents.data||[]).map(e=>({url:base+'/agenda/'+e.slug,lastModified:e.updated_at?new Date(e.updated_at):new Date()})),
+  ...(nowEvents.data||[]).map(e=>({url:base+'/agenda/'+e.slug,lastModified:e.created_at?new Date(e.created_at):new Date()})),
   ...(nowPages.data||[]).map(p=>({url:base+'/halaman/'+p.slug,lastModified:p.updated_at?new Date(p.updated_at):new Date()}))
  ];
  return urls;
