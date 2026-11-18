@@ -5,7 +5,7 @@ import {useParams,useRouter} from 'next/navigation';
 import ArticleEditor from '@/components/ArticleEditor';
 import {supabase} from '@/lib/supabase';
 
-const allStatuses=['draft','in_review','revision','scheduled','published','archived'];
+const allStatuses=['draft','in_review','revision','scheduled','published','archived'];\nconst localDate=(value:string|null)=>{if(!value)return '';const d=new Date(value);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)};\nconst publishers=['super_admin','admin','editor','editor_in_chief'];
 const journalistStatuses=['draft','in_review','revision'];
 export default function EditArticle(){
  const{id}=useParams<{id:string}>();
@@ -15,7 +15,7 @@ export default function EditArticle(){
  const[content,setContent]=useState<any>(null);
  const[category,setCategory]=useState('');
  const[image,setImage]=useState('');
- const[status,setStatus]=useState('draft');
+ const[status,setStatus]=useState('draft');\n const[scheduledAt,setScheduledAt]=useState('');\n const[publishedAt,setPublishedAt]=useState<string|null>(null);
  const[categories,setCategories]=useState<any[]>([]);
  const[role,setRole]=useState('');
  const[authorId,setAuthorId]=useState('');
@@ -41,7 +41,7 @@ export default function EditArticle(){
    setAuthorId(a.author_id||'');
    if(profile?.role==='journalist'&&a.author_id!==user.id){setForbidden(true);setMsg('Anda hanya dapat menyunting berita milik sendiri.');setLoading(false);return}
    setTitle(a.title||'');setExcerpt(a.excerpt||'');setContent(a.content);
-   setCategory(a.category_id||'');setImage(a.featured_image||'');setStatus(a.status||'draft');
+   setCategory(a.category_id||'');setImage(a.featured_image||'');setStatus(a.status||'draft');setScheduledAt(localDate(a.scheduled_at));setPublishedAt(a.published_at||null);
    setCategories(c||[]);
    setLoading(false);
   })();
@@ -58,7 +58,7 @@ export default function EditArticle(){
   if(previousError||!previous){setMsg('Gagal mengambil versi berita sebelumnya: '+(previousError?.message||'data tidak ditemukan'));setSaving(false);return}
   const{error:revisionError}=await supabase.from('revisions').insert({article_id:id,editor_id:user.id,title:previous.title,content:previous.content,note:'Snapshot otomatis sebelum penyuntingan'});
   if(revisionError){setMsg('Gagal membuat riwayat revisi: '+revisionError.message);setSaving(false);return}
-  const{error}=await supabase.from('articles').update({title:title.trim(),excerpt,content,category_id:category||null,featured_image:image||null,status}).eq('id',id);
+  const publishFields=status==='scheduled'?{scheduled_at:new Date(scheduledAt).toISOString(),published_at:null}:status==='published'?{scheduled_at:null,published_at:publishedAt||new Date().toISOString()}:{scheduled_at:null,published_at:null};\n  const{error}=await supabase.from('articles').update({title:title.trim(),excerpt,content,category_id:category||null,featured_image:image||null,status,...publishFields}).eq('id',id);
   if(error){setMsg('Gagal menyimpan berita: '+error.message);setSaving(false);return}
   await supabase.from('activity_logs').insert({actor_id:user.id,action:'article_updated',entity_type:'article',entity_id:id,details:{title}});
   router.push('/admin/berita');
@@ -73,7 +73,7 @@ export default function EditArticle(){
   <label>Kategori</label><select value={category} onChange={e=>setCategory(e.target.value)} style={field}><option value="">Pilih kategori</option>{categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
   <label>URL gambar utama</label><input value={image} onChange={e=>setImage(e.target.value)} style={field}/>
   <label>Status</label><select value={status} onChange={e=>setStatus(e.target.value)} style={field}>{(role==='journalist'?journalistStatuses:allStatuses).map(s=><option key={s} value={s}>{s}</option>)}</select>
-  <label>Isi berita</label><ArticleEditor value={content} onChange={setContent}/>
+  <label>Isi berita</label>{status==='scheduled'&&publishers.includes(role)&&<><label>Waktu publikasi</label><input type='datetime-local' min={new Date(Date.now()+60000).toISOString().slice(0,16)} value={scheduledAt} onChange={e=>setScheduledAt(e.target.value)} style={field}/></>}<ArticleEditor value={content} onChange={setContent}/>
   {msg&&<p role="status">{msg}</p>}
   <button disabled={saving||!title.trim()} onClick={save} style={primary}>{saving?'Menyimpan…':'Simpan perubahan'}</button>
  </>;
