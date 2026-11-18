@@ -33,6 +33,18 @@ export default function Users(){
   setMsg(data?.message||'Peran berhasil diperbarui.');
   await load();
  }
+ async function deleteUser(target:any){
+  if(!supabase)return;
+  if(actorRole!=='super_admin'){setMsg('Hanya super admin yang dapat menghapus pengguna.');return}
+  if(target.id===actorId){setMsg('Anda tidak dapat menghapus akun sendiri.');return}
+  const label=target.full_name||target.email||'pengguna ini';
+  if(!window.confirm(`Hapus akun ${label}? Tindakan ini permanen dan tidak dapat dibatalkan.`))return;
+  setMsg('Menghapus pengguna…');
+  const{data,error}=await supabase.functions.invoke('super-admin-delete-user',{body:{target_user_id:target.id}});
+  if(error||data?.error){setMsg(error?.message||data?.error||'Gagal menghapus pengguna.');return}
+  setMsg(data?.message||'Pengguna berhasil dihapus.');
+  await load();
+ }
  async function changeActive(target:any,value:boolean){
   if(!supabase)return;
   if(target.id===actorId){setMsg('Anda tidak dapat menonaktifkan akun sendiri.');return}
@@ -57,7 +69,7 @@ export default function Users(){
      <td style={cell}><b>{u.full_name||'Tanpa nama'}</b><div className="muted">{u.email}</div></td>
      <td style={cell}><select disabled={isSelf(u)||protectedTarget(u)} value={u.role} onChange={e=>changeRole(u,e.target.value)}>{roles.filter(r=>actorRole==='super_admin'||!['admin','super_admin'].includes(r)).map(r=><option key={r} value={r}>{r}</option>)}</select></td>
      <td style={cell}>{u.is_active?'Aktif':'Nonaktif'}</td>
-     <td style={cell}><button disabled={isSelf(u)||protectedTarget(u)} onClick={()=>changeActive(u,!u.is_active)}>{u.is_active?'Nonaktifkan':'Aktifkan'}</button></td>
+     <td style={cell}><button disabled={isSelf(u)||protectedTarget(u)} onClick={()=>changeActive(u,!u.is_active)}>{u.is_active?'Nonaktifkan':'Aktifkan'}</button>{actorRole==='super_admin'&&<button disabled={isSelf(u)} onClick={()=>deleteUser(u)} style={{marginLeft:8,background:'#fff',color:'#b42318',border:'1px solid #b42318',borderRadius:5,padding:'6px 9px'}}>Hapus</button>}</td>
     </tr>)}</tbody>
    </table>
   </div>
